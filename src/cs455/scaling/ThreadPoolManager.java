@@ -1,8 +1,12 @@
 package cs455.scaling;
 
-import java.util.LinkedList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ThreadPoolManager {
-    private LinkedList<byte[]> workList;
+    private ConcurrentLinkedQueue<byte[]> workQueue;
+
+    public ThreadPoolManager() {
+
+    }
 
 }
