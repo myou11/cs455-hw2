@@ -6,7 +6,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
@@ -15,17 +15,23 @@ public class Client {
     private int messageRate;
     private ByteBuffer buffer;
 
+    private ArrayList<String> sentHashCodes;
+
     private final boolean DEBUG = true;
 
     public Client(int messageRate) throws IOException{
         this.selector = Selector.open();
         this.messageRate = messageRate;
         this.buffer = ByteBuffer.allocate(8000);
+        this.sentHashCodes = new ArrayList<>();
     }
 
     private void connect(SelectionKey key) throws IOException {
         SocketChannel socketChannel = (SocketChannel) key.channel();
         socketChannel.finishConnect();
+
+        if (DEBUG)
+            System.out.printf("Client listening on port: %d\n", socketChannel.socket().getLocalPort());
 
         // now that we have finished connecting to the server,
         // next time the selector scans the channels for activity,
@@ -55,6 +61,12 @@ public class Client {
 
         String hashCode = new String(hashBytes).trim();
         System.out.printf("Hash code from server: %s\n", hashCode);
+
+        if (sentHashCodes.contains(hashCode)) {
+            sentHashCodes.remove(hashCode);
+            System.out.printf("Hash code %s removed from the list\n", hashCode);
+        } else
+            System.out.printf("Hash code %s was not found in the list\n", hashCode);
     }
 
     private void write(SelectionKey key) throws IOException, InterruptedException {
@@ -62,6 +74,9 @@ public class Client {
 
         Random r = new Random();
         r.nextBytes(buffer.array());
+
+        // Keep track of hash code to verify with hash code server sends back
+        sentHashCodes.add(TaskHandler.SHA1FromBytes(buffer.array()));
 
         int numBytesWritten = socketChannel.write(buffer);
 
@@ -82,11 +97,11 @@ public class Client {
         Thread.sleep(1000/messageRate);
     }
 
-    private void startClient(String host, int portNum) throws IOException, InterruptedException {
+    private void startClient(String host, int serverPortNum) throws IOException, InterruptedException {
         SocketChannel socketChannel = SocketChannel.open();
         socketChannel.configureBlocking(false);
         socketChannel.register(this.selector, SelectionKey.OP_CONNECT);
-        socketChannel.connect(new InetSocketAddress(host, portNum));
+        socketChannel.connect(new InetSocketAddress(host, serverPortNum));
 
         while (true) {
             int channelsReady = this.selector.select();

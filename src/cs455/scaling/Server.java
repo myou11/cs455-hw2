@@ -57,9 +57,6 @@ public class Server {
     }
 
     private void startServer(int portNum) throws IOException {
-        if (DEBUG)
-            System.out.println("Server starting...");
-
         // setup thread pool
         this.threadPool.initialize();
         this.threadPool.startThreads();
@@ -68,6 +65,9 @@ public class Server {
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
         serverSocketChannel.configureBlocking(false);
         serverSocketChannel.socket().bind(new InetSocketAddress("localhost", portNum));
+
+        if (DEBUG)
+            System.out.printf("Server listening on port %d...\n", portNum);
 
         serverSocketChannel.register(this.selector, SelectionKey.OP_ACCEPT);
 
@@ -85,10 +85,6 @@ public class Server {
 
                     else if (key.isReadable()) {
                         this.read(key);
-                    }
-
-                    else if (key.isWritable()) {
-
                     }
 
                     keys.remove();

@@ -15,7 +15,7 @@ public class TaskHandler implements Runnable {
         this.workQueue = workQueue;
     }
 
-    public String SHA1FromBytes(byte[] data) {
+    public static String SHA1FromBytes(byte[] data) {
         BigInteger hashInt = null;
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA1");
@@ -36,14 +36,12 @@ public class TaskHandler implements Runnable {
             // Hash message
             String hashCode = SHA1FromBytes((byte[]) task.attachment());
 
-            // TODO: send this back to client, printing it for now
-            System.out.printf("Sending hash code %s back to client\n", hashCode);
-
             ByteBuffer buffer = ByteBuffer.wrap(hashCode.getBytes());
 
             SocketChannel clientChannel = (SocketChannel) task.channel();
             try {
                 clientChannel.write(buffer);
+                System.out.printf("Sending hash code %s back to client %s\n", hashCode, clientChannel.socket().getInetAddress().getHostAddress());
 
                 // after sending hash back to client, this channel will be
                 // wanting to read incoming messages again
