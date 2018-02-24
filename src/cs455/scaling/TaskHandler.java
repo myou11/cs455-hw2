@@ -3,12 +3,12 @@ package cs455.scaling;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.ArrayList;
 
 public class TaskHandler implements Runnable {
-    private ConcurrentLinkedQueue<byte[]> workQueue;
+    private WorkQueue workQueue;
 
-    public TaskHandler(ConcurrentLinkedQueue workQueue) {
+    public TaskHandler(WorkQueue workQueue) {
         this.workQueue = workQueue;
     }
 
@@ -27,18 +27,14 @@ public class TaskHandler implements Runnable {
     }
 
     public void run() {
-        while (true) {
+        while(true) {
             // Read message
-            // Remove task from head of the queue
-            // null if empty
-            byte[] data = workQueue.poll();
-            if (data != null) {
-                // Hash message
-                String hashCode = SHA1FromBytes(data);
+            byte[] data = workQueue.remove(0);
+            // Hash message
+            String hashCode = SHA1FromBytes(data);
 
-                // TODO: send this back to client, printing it for now
-                System.out.printf("hashCode: %s\n", hashCode);
-            }
+            // TODO: send this back to client, printing it for now
+            System.out.printf("hashCode: %s\n", hashCode);
         }
     }
 }
