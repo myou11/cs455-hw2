@@ -1,15 +1,15 @@
 package cs455.scaling;
 
+import java.nio.channels.SelectionKey;
 import java.util.Random;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ThreadPool {
     private Thread[] threadPool;
-    private ConcurrentLinkedQueue<byte[]> workQueue;
+    private WorkQueue workQueue;
 
-    public ThreadPool() {
-        this.threadPool = new Thread[10];
-        this.workQueue = new ConcurrentLinkedQueue<>();
+    public ThreadPool(int threadPoolSize) {
+        this.threadPool = new Thread[threadPoolSize];
+        this.workQueue = new WorkQueue();
     }
 
     public void initialize() {
@@ -24,12 +24,12 @@ public class ThreadPool {
         }
     }
 
-    public void addWork(byte[] work) {
+    public void addWork(SelectionKey work) {
         workQueue.add(work);
     }
 
-    public static void main(String[] args) {
-        ThreadPool threadPool = new ThreadPool();
+    /*public static void main(String[] args) {
+        ThreadPool threadPool = new ThreadPool(Integer.parseInt(args[0]));
         threadPool.initialize();
         threadPool.startThreads();
 
@@ -40,6 +40,6 @@ public class ThreadPool {
             r.nextBytes(randomBytes);
             threadPool.addWork(randomBytes);
         }
-    }
+    }*/
 
 }
