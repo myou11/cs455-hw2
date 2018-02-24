@@ -1,9 +1,10 @@
 package cs455.scaling;
 
+import java.nio.channels.SelectionKey;
 import java.util.ArrayList;
 
 public class WorkQueue {
-    private ArrayList<byte[]> workQueue;
+    private ArrayList<SelectionKey> workQueue;
 
     public WorkQueue() {
         this.workQueue = new ArrayList<>();
@@ -13,12 +14,12 @@ public class WorkQueue {
         return workQueue.isEmpty();
     }
 
-    public synchronized void add(byte[] data) {
-        workQueue.add(data);
+    public synchronized void add(SelectionKey task) {
+        workQueue.add(task);
         notifyAll();
     }
 
-    public synchronized byte[] remove(int index) {
+    public synchronized SelectionKey remove(int index) {
         while (true) {
             if(workQueue.isEmpty()) {
                 try {

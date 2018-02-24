@@ -40,10 +40,23 @@ public class Server {
 
         int numBytesRead = socketChannel.read(buffer);
         System.out.printf("Bytes read: %d\n", numBytesRead);
-        this.threadPool.addWork(buffer.array());
+        // attach the byte[] to the key so the TaskHandler threads can retrieve the messages
+        // and write the hashed message back to the client thru the SelectionKey's channel
+        key.attach(buffer.array());
+        this.threadPool.addWork(key);
+
+        // now that we've read some data, this channel will want to write after
+        // it hashes the message and want to send it back to the client
+        key.interestOps(SelectionKey.OP_WRITE);
     }
 
-    public void startServer(int portNum) throws IOException {
+    private void write(SelectionKey key) throws IOException {
+        SocketChannel socketChannel = (SocketChannel) key.channel();
+
+        //int numBytesWritten = socketChannel.write()
+    }
+
+    private void startServer(int portNum) throws IOException {
         if (DEBUG)
             System.out.println("Server starting...");
 
@@ -72,6 +85,10 @@ public class Server {
 
                     else if (key.isReadable()) {
                         this.read(key);
+                    }
+
+                    else if (key.isWritable()) {
+
                     }
 
                     keys.remove();

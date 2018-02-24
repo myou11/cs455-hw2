@@ -1,6 +1,6 @@
 package cs455.scaling;
 
-import java.util.ArrayList;
+import java.nio.channels.SelectionKey;
 import java.util.Random;
 
 public class ThreadPool {
@@ -24,11 +24,11 @@ public class ThreadPool {
         }
     }
 
-    public void addWork(byte[] work) {
+    public void addWork(SelectionKey work) {
         workQueue.add(work);
     }
 
-    public static void main(String[] args) {
+    /*public static void main(String[] args) {
         ThreadPool threadPool = new ThreadPool(Integer.parseInt(args[0]));
         threadPool.initialize();
         threadPool.startThreads();
@@ -40,6 +40,6 @@ public class ThreadPool {
             r.nextBytes(randomBytes);
             threadPool.addWork(randomBytes);
         }
-    }
+    }*/
 
 }
