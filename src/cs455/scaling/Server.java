@@ -7,26 +7,45 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 public class Server {
     private Selector selector;
     private ThreadPool threadPool;
     private ByteBuffer buffer;
 
-    private final boolean DEBUG = true;
+    private HashMap<String, Integer> clientThroughput;
+
+    private long time;
+
+    private final boolean DEBUG = false;
 
     public Server(int threadPoolSize) throws IOException {
         this.selector = Selector.open();
-        this.threadPool = new ThreadPool(threadPoolSize);
         this.buffer = ByteBuffer.allocate(8000);
+        this.clientThroughput = new HashMap<>();
+        this.threadPool = new ThreadPool(threadPoolSize, clientThroughput);
+        this.time = System.currentTimeMillis();
     }
 
     private void accept(SelectionKey key) throws IOException {
         ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
         SocketChannel socketChannel = serverSocketChannel.accept();
 
-        System.out.println("Accepting incoming connection");
+        if (DEBUG)
+            System.out.println("Accepting incoming connection");
+
+        // Keep track of packet throughput for this client
+        String ipPortNumStr = socketChannel.getRemoteAddress().toString();
+        //System.out.printf("local addr of client: %s\n", ipPortNumStr);
+        clientThroughput.put(ipPortNumStr, 0);
+        // TODO: Cant increment the throughput per processed task since that happens in the TaskHandler thread
+        // would have to pass a ref of the clientThroughput map into TaskHandler
+        // Could avoid that by figuring out a way to give the threads a task and then have them indicate they are
+        // ready to write, then server could just incrment the throughputs here?
+
         socketChannel.configureBlocking(false);
         // Register this socket with the intention to read from it
         // since client will be sending us data
@@ -39,7 +58,9 @@ public class Server {
         buffer.clear();
 
         int numBytesRead = socketChannel.read(buffer);
-        System.out.printf("Bytes read: %d\n", numBytesRead);
+        if (DEBUG)
+            System.out.printf("Bytes read: %d\n", numBytesRead);
+
         // attach the byte[] to the key so the TaskHandler threads can retrieve the messages
         // and write the hashed message back to the client thru the SelectionKey's channel
         key.attach(buffer.array());
@@ -50,28 +71,25 @@ public class Server {
         key.interestOps(SelectionKey.OP_WRITE);
     }
 
-    private void write(SelectionKey key) throws IOException {
-        SocketChannel socketChannel = (SocketChannel) key.channel();
-
-        //int numBytesWritten = socketChannel.write()
-    }
-
     private void startServer(int portNum) throws IOException {
-        // setup thread pool
-        this.threadPool.initialize();
-        this.threadPool.startThreads();
-
         // create the ServerSocketChannel
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
         serverSocketChannel.configureBlocking(false);
         serverSocketChannel.socket().bind(new InetSocketAddress("localhost", portNum));
 
-        if (DEBUG)
-            System.out.printf("Server listening on port %d...\n", portNum);
+        System.out.printf("Server listening on port %d...\n", portNum);
 
         serverSocketChannel.register(this.selector, SelectionKey.OP_ACCEPT);
 
+        StatisticsCollector statsCollector = new StatisticsCollector(clientThroughput);
+
         while (true) {
+            long currTime = System.currentTimeMillis();
+            if (currTime - this.time > 20000) {
+                statsCollector.printStatistics(currTime);
+                this.time = currTime;
+            }
+
             int channelsReady = this.selector.select();
 
             if (channelsReady > 0) {

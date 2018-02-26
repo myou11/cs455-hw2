@@ -1,26 +1,20 @@
 package cs455.scaling;
 
 import java.nio.channels.SelectionKey;
+import java.util.HashMap;
 import java.util.Random;
 
 public class ThreadPool {
     private Thread[] threadPool;
     private WorkQueue workQueue;
 
-    public ThreadPool(int threadPoolSize) {
+    public ThreadPool(int threadPoolSize, HashMap<String, Integer> clientThroughput) {
         this.threadPool = new Thread[threadPoolSize];
         this.workQueue = new WorkQueue();
-    }
 
-    public void initialize() {
-        for (int i = 0; i < threadPool.length; ++i) {
-            threadPool[i] = new Thread(new TaskHandler(workQueue));
-        }
-    }
-
-    public void startThreads() {
-        for (Thread thread : threadPool) {
-            thread.start();
+        for (int i = 0; i < threadPoolSize; ++i) {
+            threadPool[i] = new Thread(new TaskHandler(workQueue, clientThroughput));
+            threadPool[i].start();
         }
     }
 

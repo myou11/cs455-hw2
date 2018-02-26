@@ -7,12 +7,17 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 
 public class TaskHandler implements Runnable {
     private WorkQueue workQueue;
+    private HashMap<String, Integer> clientThroughput;
 
-    public TaskHandler(WorkQueue workQueue) {
+    private final boolean DEBUG = false;
+
+    public TaskHandler(WorkQueue workQueue, HashMap<String, Integer> clientThroughput) {
         this.workQueue = workQueue;
+        this.clientThroughput = clientThroughput;
     }
 
     public static String SHA1FromBytes(byte[] data) {
@@ -41,7 +46,13 @@ public class TaskHandler implements Runnable {
             SocketChannel clientChannel = (SocketChannel) task.channel();
             try {
                 clientChannel.write(buffer);
-                System.out.printf("Sending hash code %s back to client %s\n", hashCode, clientChannel.socket().getInetAddress().getHostAddress());
+
+                String ipPortNumStr = clientChannel.getRemoteAddress().toString();
+                int throughput = clientThroughput.get(ipPortNumStr);
+                clientThroughput.put(ipPortNumStr, throughput + 1);
+
+                if (DEBUG)
+                    System.out.printf("Sending hash code %s back to client %s\n", hashCode, clientChannel.socket().getInetAddress().getHostAddress());
 
                 // after sending hash back to client, this channel will be
                 // wanting to read incoming messages again

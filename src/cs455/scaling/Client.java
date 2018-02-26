@@ -17,7 +17,7 @@ public class Client {
 
     private ArrayList<String> sentHashCodes;
 
-    private final boolean DEBUG = true;
+    private final boolean DEBUG = false;
 
     public Client(int messageRate) throws IOException{
         this.selector = Selector.open();
@@ -30,8 +30,7 @@ public class Client {
         SocketChannel socketChannel = (SocketChannel) key.channel();
         socketChannel.finishConnect();
 
-        if (DEBUG)
-            System.out.printf("Client listening on port: %d\n", socketChannel.socket().getLocalPort());
+        System.out.printf("Client listening on port: %d\n", socketChannel.socket().getLocalPort());
 
         // now that we have finished connecting to the server,
         // next time the selector scans the channels for activity,
@@ -60,13 +59,19 @@ public class Client {
         buffer.clear();
 
         String hashCode = new String(hashBytes).trim();
-        System.out.printf("Hash code from server: %s\n", hashCode);
+
+        if (DEBUG)
+            System.out.printf("Hash code from server: %s\n", hashCode);
 
         if (sentHashCodes.contains(hashCode)) {
             sentHashCodes.remove(hashCode);
-            System.out.printf("Hash code %s removed from the list\n", hashCode);
-        } else
-            System.out.printf("Hash code %s was not found in the list\n", hashCode);
+
+            if (DEBUG)
+                System.out.printf("Hash code %s removed from the list\n", hashCode);
+        } else {
+            if(DEBUG)
+                System.out.printf("Hash code %s was not found in the list\n", hashCode);
+        }
     }
 
     private void write(SelectionKey key) throws IOException, InterruptedException {
