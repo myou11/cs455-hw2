@@ -47,16 +47,33 @@ public class TaskHandler implements Runnable {
                 }
                 // Read message
                 SelectionKey task = workQueue.removeFirst();
-                // Hash message
-                String hashCode = SHA1FromBytes((byte[]) task.attachment());
-
-                ByteBuffer buffer = ByteBuffer.wrap(hashCode.getBytes());
-
                 SocketChannel clientChannel = (SocketChannel) task.channel();
+                // TODO: NEED TO CHANGE THIS TO ACCOUNT FOR DIFFERENT SHA HASH LENGHTS
+                ByteBuffer buffer = ByteBuffer.allocate(8192);
+
+                int bytesRead = 0;
+                while (buffer.hasRemaining() && bytesRead != -1) {
+                    try {
+                        bytesRead = clientChannel.read(buffer);
+                    } catch (IOException ie) {
+                        ie.printStackTrace();
+                    }
+                }
+
+                // Hash message
+                String hashCode = SHA1FromBytes(buffer.array());
+
+                ByteBuffer hashBuffer = ByteBuffer.wrap(hashCode.getBytes());
+
                 try {
-                    clientChannel.write(buffer);
+                    int bytesWritten = 0;
+                    while (hashBuffer.hasRemaining() && bytesWritten != -1) {
+                        bytesWritten = clientChannel.write(hashBuffer);
+                    }
 
                     String ipPortNumStr = clientChannel.getRemoteAddress().toString();
+
+                    // TODO: MIGHT NEED TO SYNC ACCESS TO clientThroughput HERE AND IN SERVER ACCEPT
                     int throughput = clientThroughput.get(ipPortNumStr);
                     clientThroughput.put(ipPortNumStr, throughput + 1);
 

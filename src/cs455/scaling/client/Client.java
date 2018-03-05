@@ -20,7 +20,7 @@ public class Client {
 
     private LinkedList<String> sentHashCodes;
 
-    private final boolean DEBUG = true;
+    private final boolean DEBUG = false;
 
     public Client(int messageRate) throws IOException{
         this.selector = Selector.open();
@@ -39,8 +39,13 @@ public class Client {
         // next time the selector scans the channels for activity,
         // let selector know that this socketChannel is interested in
         // sending data to the server next time
-        key.interestOps(SelectionKey.OP_WRITE);
 
+        // TODO: NEED TO UPDATE THE COMMENT FOR THIS ABOVE; Used to be OP_WRITE before, changed it because
+        // TODO: now we start a separate thread to send so this selection key doesn't need to be interested
+        // TODO: in writing again
+        key.interestOps(SelectionKey.OP_READ);
+
+        // start a new thread to send messages
         (new Thread(new ClientSenderThread(key, messageRate, sentHashCodes))).start();
     }
 
@@ -51,8 +56,12 @@ public class Client {
         // TODO: think about using compact
         buffer.clear();
 
-        int numBytesRead = socketChannel.read(buffer);
-        byte[] hashBytes = new byte[numBytesRead];
+        int bytesRead = 0;
+        while (buffer.hasRemaining() && bytesRead != -1) {
+            bytesRead = socketChannel.read(buffer);
+        }
+
+        byte[] hashBytes = new byte[bytesRead];
 
         // after reading response from the server, set channel to write again
         // TODO: commented below line b/c it should just look to read all the time

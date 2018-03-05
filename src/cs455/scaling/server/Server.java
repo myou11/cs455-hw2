@@ -22,7 +22,7 @@ public class Server {
 
     private long time;
 
-    private final boolean DEBUG = true;
+    private final boolean DEBUG = false;
 
     public Server(int threadPoolSize) throws IOException {
         this.selector = Selector.open();
@@ -71,7 +71,7 @@ public class Server {
         // now that we've read some data, this channel will want to write after
         // it hashes the message and want to send it back to the client
         key.interestOps(SelectionKey.OP_WRITE);*/
-        ByteBuffer buffer = ByteBuffer.allocate(8000);
+        /*ByteBuffer buffer = ByteBuffer.allocate(8000);
 
         int bytesRead = 0;
         while (buffer.hasRemaining() && bytesRead != -1) {
@@ -79,9 +79,10 @@ public class Server {
         }
 
         key.attach(buffer.array());
-        this.threadPool.addWork(key);
+        this.threadPool.addWork(key);*/
 
         key.interestOps(SelectionKey.OP_WRITE);
+        this.threadPool.addWork(key);
     }
 
     private void startServer(int portNum) throws IOException {

@@ -15,7 +15,7 @@ public class ClientSenderThread implements Runnable {
     private LinkedList<String> sentHashCodes;
     private ByteBuffer buffer = ByteBuffer.allocate(8192);
 
-    private final boolean DEBUG = true;
+    private final boolean DEBUG = false;
 
     public ClientSenderThread(SelectionKey serverKey, int messageRate, LinkedList<String> sentHashCodes) {
         this.serverChannel = (SocketChannel) serverKey.channel();
@@ -36,7 +36,9 @@ public class ClientSenderThread implements Runnable {
                 try {
                     bytesWritten = serverChannel.write(buffer);
                 } catch (IOException ie) {
-                    ie.printStackTrace();
+                    // Conenction broken with server, exit
+                    System.out.println("Connection broken with server. Exiting...");
+                    System.exit(1);
                 }
             }
 
