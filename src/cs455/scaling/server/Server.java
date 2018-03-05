@@ -22,7 +22,7 @@ public class Server {
 
     private long time;
 
-    private final boolean DEBUG = false;
+    private final boolean DEBUG = true;
 
     public Server(int threadPoolSize) throws IOException {
         this.selector = Selector.open();

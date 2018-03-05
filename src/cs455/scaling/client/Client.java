@@ -10,6 +10,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Random;
 
 public class Client {
@@ -17,15 +18,15 @@ public class Client {
     private int messageRate;
     private ByteBuffer buffer;
 
-    private ArrayList<String> sentHashCodes;
+    private LinkedList<String> sentHashCodes;
 
-    private final boolean DEBUG = false;
+    private final boolean DEBUG = true;
 
     public Client(int messageRate) throws IOException{
         this.selector = Selector.open();
         this.messageRate = messageRate;
         this.buffer = ByteBuffer.allocate(8000);
-        this.sentHashCodes = new ArrayList<>();
+        this.sentHashCodes = new LinkedList<>();
     }
 
     private void connect(SelectionKey key) throws IOException {
@@ -39,6 +40,8 @@ public class Client {
         // let selector know that this socketChannel is interested in
         // sending data to the server next time
         key.interestOps(SelectionKey.OP_WRITE);
+
+        (new Thread(new ClientSenderThread(key, messageRate, sentHashCodes))).start();
     }
 
     private void read(SelectionKey key) throws IOException {
@@ -52,7 +55,8 @@ public class Client {
         byte[] hashBytes = new byte[numBytesRead];
 
         // after reading response from the server, set channel to write again
-        key.interestOps(SelectionKey.OP_WRITE);
+        // TODO: commented below line b/c it should just look to read all the time
+        // key.interestOps(SelectionKey.OP_WRITE);
         // resets the position to 0 to allow us to read the data into a byte[]
         buffer.flip();
         buffer.get(hashBytes);
@@ -76,7 +80,7 @@ public class Client {
         }
     }
 
-    private void write(SelectionKey key) throws IOException, InterruptedException {
+    /*private void write(SelectionKey key) throws IOException, InterruptedException {
         SocketChannel socketChannel = (SocketChannel) key.channel();
 
         Random r = new Random();
@@ -91,18 +95,13 @@ public class Client {
         // will be expecting a response so get it ready to read next time around
         // TODO: might need to set interests to write and read since we want to send
         // at a rate of R per second. Might need to remove the else ifs below too
-        key.interestOps(/*SelectionKey.OP_WRITE | */SelectionKey.OP_READ);
-
-        // TODO: going to have to modify this to handle cases when not all 8000 bytes are written
-        /*if (numBytesWritten == 8000) {
-            Thread.sleep(1000 / messageRate);
-        }*/
+        key.interestOps(SelectionKey.OP_READ);
 
         if (DEBUG)
             System.out.printf("Bytes written: %d\n", numBytesWritten);
 
         Thread.sleep(1000/messageRate);
-    }
+    }*/
 
     private void startClient(String host, int serverPortNum) throws IOException, InterruptedException {
         SocketChannel socketChannel = SocketChannel.open();
@@ -125,10 +124,6 @@ public class Client {
 
                     else if (key.isReadable()) {
                         this.read(key);
-                    }
-
-                    else if (key.isWritable()) {
-                        this.write(key);
                     }
 
                     keys.remove();

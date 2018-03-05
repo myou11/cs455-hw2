@@ -39,7 +39,7 @@ public class StatisticsCollector {
         double meanPerClientThroughput = serverThroughput / activeClientConnections;
         double stdDevPerClientThroughput = stdDev(meanPerClientThroughput);
 
-        System.out.printf("[%s] Server Throughput: %.0f, Active Client Connection: %.0f, Mean Per-client Throughput: %.3f, Std. Dev. of Per-client Throughput: %.3f\n",
+        System.out.printf("[%s] Server Throughput: %.0f, Active Client Connections: %.0f, Mean Per-client Throughput: %.3f, Std. Dev. of Per-client Throughput: %.3f\n",
                         sdf.format(date), serverThroughput, activeClientConnections, meanPerClientThroughput, stdDevPerClientThroughput);
     }
 }
