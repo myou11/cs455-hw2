@@ -1,31 +1,29 @@
 package cs455.scaling.client;
 
-import cs455.scaling.server.TaskHandler;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Random;
 
 public class Client {
     private Selector selector;
     private int messageRate;
     private ByteBuffer buffer;
 
-    private LinkedList<String> sentHashCodes;
+    private LinkedList<byte[]> sentHashCodes;
 
     private final boolean DEBUG = false;
 
     public Client(int messageRate) throws IOException{
         this.selector = Selector.open();
         this.messageRate = messageRate;
-        this.buffer = ByteBuffer.allocate(8000);
+        this.buffer = ByteBuffer.allocate(20);
         this.sentHashCodes = new LinkedList<>();
     }
 
@@ -35,14 +33,8 @@ public class Client {
 
         System.out.printf("Client listening on port: %d\n", socketChannel.socket().getLocalPort());
 
-        // now that we have finished connecting to the server,
-        // next time the selector scans the channels for activity,
-        // let selector know that this socketChannel is interested in
-        // sending data to the server next time
-
-        // TODO: NEED TO UPDATE THE COMMENT FOR THIS ABOVE; Used to be OP_WRITE before, changed it because
-        // TODO: now we start a separate thread to send so this selection key doesn't need to be interested
-        // TODO: in writing again
+        /*  Once connected to the server, the main client thread will only want to read the responses
+         *  the server sends back since the client's sender thread will take care of writing messages to the server  */
         key.interestOps(SelectionKey.OP_READ);
 
         // start a new thread to send messages
@@ -53,7 +45,6 @@ public class Client {
         SocketChannel socketChannel = (SocketChannel) key.channel();
 
         // reset position to 0 for reading into the buffer
-        // TODO: think about using compact
         buffer.clear();
 
         int bytesRead = 0;
@@ -61,56 +52,32 @@ public class Client {
             bytesRead = socketChannel.read(buffer);
         }
 
-        byte[] hashBytes = new byte[bytesRead];
+        byte[] hashBytes = buffer.array();
 
-        // after reading response from the server, set channel to write again
-        // TODO: commented below line b/c it should just look to read all the time
-        // key.interestOps(SelectionKey.OP_WRITE);
-        // resets the position to 0 to allow us to read the data into a byte[]
+        // Resets the position to 0 to allow us to read (get) the data into a byte[]
         buffer.flip();
         buffer.get(hashBytes);
 
         // clear the buffer for the next write operation
         buffer.clear();
 
-        String hashCode = new String(hashBytes).trim();
+        // convert the hashed digest into a readable format; used for debugging below
+        BigInteger hashInt = new BigInteger(1, hashBytes);
+        String hashString = hashInt.toString(16);
 
         if (DEBUG)
-            System.out.printf("Hash code from server: %s\n", hashCode);
+            System.out.printf("Hash code from server: %s\n", hashString);
 
-        if (sentHashCodes.contains(hashCode)) {
-            sentHashCodes.remove(hashCode);
+        if (sentHashCodes.contains(hashBytes)) {
+            sentHashCodes.remove(hashBytes);
 
             if (DEBUG)
-                System.out.printf("Hash code %s removed from the list\n", hashCode);
+                System.out.printf("Hash code %s removed from the list\n", hashString);
         } else {
             if(DEBUG)
-                System.out.printf("Hash code %s was not found in the list\n", hashCode);
+                System.out.printf("Hash code %s was not found in the list\n", hashString);
         }
     }
-
-    /*private void write(SelectionKey key) throws IOException, InterruptedException {
-        SocketChannel socketChannel = (SocketChannel) key.channel();
-
-        Random r = new Random();
-        r.nextBytes(buffer.array());
-
-        // Keep track of hash code to verify with hash code server sends back
-        sentHashCodes.add(TaskHandler.SHA1FromBytes(buffer.array()));
-
-        int numBytesWritten = socketChannel.write(buffer);
-
-        // after sending random 8KB to the server, this channel
-        // will be expecting a response so get it ready to read next time around
-        // TODO: might need to set interests to write and read since we want to send
-        // at a rate of R per second. Might need to remove the else ifs below too
-        key.interestOps(SelectionKey.OP_READ);
-
-        if (DEBUG)
-            System.out.printf("Bytes written: %d\n", numBytesWritten);
-
-        Thread.sleep(1000/messageRate);
-    }*/
 
     private void startClient(String host, int serverPortNum) throws IOException, InterruptedException {
         SocketChannel socketChannel = SocketChannel.open();
@@ -135,6 +102,10 @@ public class Client {
                         this.read(key);
                     }
 
+                    /*  No need to check for isWritable b/c client has a separate thread that sends
+                     *  the server messageRate msgs every second.  */
+
+                    // Remove the key now that we've handled it
                     keys.remove();
                 }
             }

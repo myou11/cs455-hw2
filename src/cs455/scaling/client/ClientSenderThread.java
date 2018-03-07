@@ -10,14 +10,22 @@ import java.util.LinkedList;
 import java.util.Random;
 
 public class ClientSenderThread implements Runnable {
+    // Cache the connection to the server so we can continually write messages to it
     private SocketChannel serverChannel;
+
+    // Client will send messages at messageRate per second to the server
     private int messageRate;
-    private LinkedList<String> sentHashCodes;
+
+    /*  Keep track of the hash codes we send so we can verify that the server hashed our message
+     *  correctly when it sends it back to us  */
+    private LinkedList<byte[]> sentHashCodes;
+
+    // Buffer to send 8KB messages
     private ByteBuffer buffer = ByteBuffer.allocate(8192);
 
     private final boolean DEBUG = false;
 
-    public ClientSenderThread(SelectionKey serverKey, int messageRate, LinkedList<String> sentHashCodes) {
+    public ClientSenderThread(SelectionKey serverKey, int messageRate, LinkedList<byte[]> sentHashCodes) {
         this.serverChannel = (SocketChannel) serverKey.channel();
         this.messageRate = messageRate;
         this.sentHashCodes = sentHashCodes;

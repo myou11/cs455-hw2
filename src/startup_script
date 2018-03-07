@@ -1,6 +1,6 @@
 CLASSES=~/455/cs455-hw2/src
 SCRIPT="cd $CLASSES;
-java -cp . cs455.scaling.client.Client denver 7200 4"
+java -cp . cs455.scaling.client.Client denver 7200 10"
 
 for ((j=1; j<=$1; j++));
 do
