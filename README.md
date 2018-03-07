@@ -27,7 +27,7 @@ correctly. If the hash matches, it is removed from the Client's list of sent has
 ### **server**
   - **Server**: Maintains a Selector that accepts incoming connections and traffic. The Selector will register incoming connections and 
         add incoming traffic to the workQueue.
-  - **ThreadPool**: Maintains a number of TaskHandler threads specified by the user. These
+  - **ThreadPool**: Maintains a number of TaskHandler threads specified by the user. These threads will do the work for the server.
   - **TaskHandler**: When there is work, read data from the workQueue, hash the data, and write the data back to the Client that sent it. 
         Afterwards, check if there is work to be done again.
 
