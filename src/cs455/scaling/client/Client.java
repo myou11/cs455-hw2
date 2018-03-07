@@ -8,15 +8,20 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Client {
     private Selector selector;
     private int messageRate;
     private ByteBuffer buffer;
 
-    private LinkedList<byte[]> sentHashCodes;
+    // Track how many messages this client has sent in the past 20s
+    private AtomicInteger numMessagesSent;
+
+    private LinkedList<String> sentHashCodes;
 
     private final boolean DEBUG = false;
 
@@ -24,6 +29,7 @@ public class Client {
         this.selector = Selector.open();
         this.messageRate = messageRate;
         this.buffer = ByteBuffer.allocate(20);
+        this.numMessagesSent = new AtomicInteger(0);
         this.sentHashCodes = new LinkedList<>();
     }
 
@@ -38,7 +44,11 @@ public class Client {
         key.interestOps(SelectionKey.OP_READ);
 
         // start a new thread to send messages
-        (new Thread(new ClientSenderThread(key, messageRate, sentHashCodes))).start();
+        (new Thread(new ClientSenderThread(key, this.messageRate, this.numMessagesSent, this.sentHashCodes))).start();
+
+        /*  Start a new thread to print the state of the client (i.e. messages sent in past 20s,
+         *  size of sentHashCodes (so we know if server is sending correct hashes and client is removing them))  */
+        (new Thread(new ClientStateThread(this.numMessagesSent, this.sentHashCodes))).start();
     }
 
     private void read(SelectionKey key) throws IOException {
@@ -68,18 +78,21 @@ public class Client {
         if (DEBUG)
             System.out.printf("Hash code from server: %s\n", hashString);
 
-        if (sentHashCodes.contains(hashBytes)) {
-            sentHashCodes.remove(hashBytes);
+        String hashBytesString = Arrays.toString(hashBytes);
+        synchronized (this.sentHashCodes) {
+            if (this.sentHashCodes.contains(hashBytesString)) {
+                this.sentHashCodes.remove(hashBytesString);
 
-            if (DEBUG)
-                System.out.printf("Hash code %s removed from the list\n", hashString);
-        } else {
-            if(DEBUG)
-                System.out.printf("Hash code %s was not found in the list\n", hashString);
+                if (DEBUG)
+                    System.out.printf("Hash code %s removed from the list\n", hashString);
+            } else {
+                if (DEBUG)
+                    System.out.printf("Hash code %s was not found in the list\n", hashString);
+            }
         }
     }
 
-    private void startClient(String host, int serverPortNum) throws IOException, InterruptedException {
+    private void startClient(String host, int serverPortNum) throws IOException {
         SocketChannel socketChannel = SocketChannel.open();
         socketChannel.configureBlocking(false);
         socketChannel.register(this.selector, SelectionKey.OP_CONNECT);
@@ -116,8 +129,8 @@ public class Client {
         try {
             Client client = new Client(Integer.parseInt(args[2]));
             client.startClient(args[0], Integer.parseInt(args[1]));
-        } catch (IOException | InterruptedException excep) {
-            excep.printStackTrace();
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
         }
     }
 }
